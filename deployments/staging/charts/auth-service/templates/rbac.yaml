@@ -1,0 +1,25 @@
+{{- if .Values.authService.rbac.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "auth-service.fullname" . }}
+  labels:
+    {{- include "auth-service.labels" . | nindent 4 }}
+rules:
+  {{- toYaml .Values.authService.rbac.rules | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "auth-service.fullname" . }}
+  labels:
+    {{- include "auth-service.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "auth-service.fullname" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "auth-service.serviceAccountName" . }}
+    namespace: {{ $.Release.Namespace }}
+{{- end }}

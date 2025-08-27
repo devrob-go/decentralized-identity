@@ -1,0 +1,15 @@
+apiVersion: v2
+name: auth-service
+description: Authentication service for Go Chat AI platform
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - go
+  - grpc
+  - authentication
+  - jwt
+  - microservice
+maintainers:
+  - name: DevOps Team
+    email: devops@your-company.com

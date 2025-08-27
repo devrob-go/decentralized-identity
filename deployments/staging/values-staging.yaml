@@ -1,0 +1,92 @@
+# Staging-specific values for go-auth-service
+# Override default values for staging environment
+
+global:
+  environment: staging
+
+# Auth Service staging overrides
+authService:
+  replicaCount: 2
+  image:
+    repository: your-registry/auth-service
+    tag: "staging"
+    
+  # Staging ingress configuration
+  ingress:
+    enabled: true
+    hosts:
+      - host: auth-staging.your-domain.com
+        paths:
+          - path: /
+            pathType: Prefix
+            
+  # Staging resource limits
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+      
+  # Staging HPA configuration
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+
+
+
+# Staging environment variables
+env:
+  APP_ENV: staging
+  LOG_LEVEL: debug
+  RATE_LIMIT_REQUESTS: "200"
+  RATE_LIMIT_WINDOW: "60"
+
+# Staging database configuration
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "staging-password"
+    database: "go_auth_service_staging"
+username: "go_auth_service_staging"
+    password: "staging-password"
+  primary:
+    persistence:
+      enabled: true
+      size: 5Gi
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+# Staging Redis configuration
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: "staging-redis-password"
+  master:
+    persistence:
+      enabled: true
+      size: 2Gi
+    resources:
+      limits:
+        cpu: 250m
+        memory: 256Mi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+
+# Staging monitoring
+monitoring:
+  serviceMonitor:
+    enabled: true
+    interval: 60s
+    scrapeTimeout: 15s

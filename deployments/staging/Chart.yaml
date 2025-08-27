@@ -1,0 +1,32 @@
+apiVersion: v2
+name: go-auth-service
+description: A production-ready Go Auth Service platform with authentication and user management
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - go
+  - grpc
+  - rest
+  - microservice
+
+  - ai
+  - authentication
+home: https://github.com/your-org/go-auth-service
+sources:
+  - https://github.com/your-org/go-auth-service
+maintainers:
+  - name: DevOps Team
+    email: devops@your-company.com
+annotations:
+  category: Infrastructure
+  licenses: MIT
+dependencies:
+  - name: postgresql
+    version: 13.2.26
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: 18.1.8
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

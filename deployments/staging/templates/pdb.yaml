@@ -1,0 +1,13 @@
+{{- if .Values.app.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "go-starter-grpc.fullname" . }}
+  labels:
+    {{- include "go-starter-grpc.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.app.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "go-starter-grpc.selectorLabels" . | nindent 6 }}
+{{- end }}

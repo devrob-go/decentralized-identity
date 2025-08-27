@@ -1,0 +1,47 @@
+# Development Dockerfile with hot reload support
+FROM golang:1.24-alpine AS builder
+
+# Install necessary tools
+RUN apk add --no-cache git ca-certificates tzdata
+
+# Set working directory
+WORKDIR /app
+
+# Copy the entire workspace to include local packages
+COPY . .
+
+# Set the working directory to auth-service
+WORKDIR /app/auth-service
+
+# Download dependencies
+RUN go mod download
+
+# Install air for hot reload
+RUN go install github.com/air-verse/air@latest
+
+# Development stage
+FROM golang:1.24-alpine
+
+# Install necessary tools
+RUN apk add --no-cache ca-certificates tzdata
+
+# Set working directory
+WORKDIR /app
+
+# Copy the entire workspace to include local packages
+COPY . .
+
+# Set the working directory to auth-service
+WORKDIR /app/auth-service
+
+# Download dependencies
+RUN go mod download
+
+# Copy air binary from builder stage
+COPY --from=builder /go/bin/air /go/bin/air
+
+# Expose ports
+EXPOSE 8080 8081
+
+# Run with air for hot reload
+CMD ["/go/bin/air"]

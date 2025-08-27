@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "go-starter-grpc.fullname" . }}
+  labels:
+    {{- include "go-starter-grpc.labels" . | nindent 4 }}
+  {{- with .Values.app.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.app.service.type }}
+  ports:
+    - port: {{ .Values.app.service.grpcPort }}
+      targetPort: grpc
+      protocol: TCP
+      name: grpc
+    - port: {{ .Values.app.service.restPort }}
+      targetPort: rest
+      protocol: TCP
+      name: rest
+  selector:
+    {{- include "go-starter-grpc.selectorLabels" . | nindent 4 }}

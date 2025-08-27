@@ -1,0 +1,151 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "api/auth/v1/proto";
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+
+// User represents a user in the system
+message User {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+// Credentials represents user login credentials
+message Credentials {
+  string email = 1;
+  string password = 2;
+}
+
+// UserCreateRequest represents user registration request
+message UserCreateRequest {
+  string name = 1;
+  string email = 2;
+  string password = 3;
+}
+
+// UserToken represents a user's authentication tokens
+message UserToken {
+  string id = 1;
+  string user_id = 2;
+  string access_token = 3;
+  string refresh_token = 4;
+  google.protobuf.Timestamp access_expires_at = 5;
+  google.protobuf.Timestamp refresh_expires_at = 6;
+  bool is_revoked = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+// AuthResponse represents authentication response
+message AuthResponse {
+  User user = 1;
+  UserToken tokens = 2;
+}
+
+// TokenResponse represents token-only response
+message TokenResponse {
+  UserToken tokens = 1;
+}
+
+// RefreshTokenRequest represents refresh token request
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+// RevokeTokenRequest represents token revocation request
+message RevokeTokenRequest {
+  string access_token = 1;
+}
+
+// ValidateTokenRequest represents token validation request
+message ValidateTokenRequest {
+  string token = 1;
+}
+
+// ValidateTokenResponse represents token validation response
+message ValidateTokenResponse {
+  string user_id = 1;
+  bool valid = 2;
+  string error_message = 3;
+}
+
+// SignOutRequest represents sign out request
+message SignOutRequest {
+  string access_token = 1;
+}
+
+// ListUsersRequest represents request to list users
+message ListUsersRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
+// ListUsersResponse represents response with list of users
+message ListUsersResponse {
+  repeated User users = 1;
+  int32 total = 2;
+  int32 page = 3;
+  int32 limit = 4;
+}
+
+// Empty represents an empty response
+message Empty {}
+
+// AuthService provides authentication and user management functionality
+service AuthService {
+  // User authentication
+  rpc SignUp(UserCreateRequest) returns (AuthResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/signup"
+      body: "*"
+    };
+  }
+  
+  rpc SignIn(Credentials) returns (AuthResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/signin"
+      body: "*"
+    };
+  }
+  
+  rpc SignOut(SignOutRequest) returns (Empty) {
+    option (google.api.http) = {
+      post: "/v1/auth/signout"
+      body: "*"
+    };
+  }
+  
+  // Token management
+  rpc RefreshToken(RefreshTokenRequest) returns (TokenResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/refresh"
+      body: "*"
+    };
+  }
+  
+  rpc RevokeToken(RevokeTokenRequest) returns (Empty) {
+    option (google.api.http) = {
+      post: "/v1/auth/revoke"
+      body: "*"
+    };
+  }
+  
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/validate"
+      body: "*"
+    };
+  }
+  
+  // User management
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
+    option (google.api.http) = {
+      get: "/v1/users"
+    };
+  }
+}

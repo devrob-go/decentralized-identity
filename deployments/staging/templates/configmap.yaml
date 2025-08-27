@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "go-starter-grpc.fullname" . }}-migrations
+  labels:
+    {{- include "go-starter-grpc.labels" . | nindent 4 }}
+data:
+  # Database migrations will be mounted here
+  # You can add your SQL migration files as data entries
+  # Example:
+  # 001_initial_schema.sql: |
+  #   CREATE TABLE IF NOT EXISTS users (
+  #     id SERIAL PRIMARY KEY,
+  #     email VARCHAR(255) UNIQUE NOT NULL,
+  #     password_hash VARCHAR(255) NOT NULL,
+  #     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  #   );

@@ -1,0 +1,38 @@
+1. Get the application URL by running these commands:
+{{- if .Values.app.ingress.enabled }}
+{{- range $host := .Values.app.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.app.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.app.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "go-starter-grpc.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo gRPC endpoint: $NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.app.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "go-starter-grpc.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "go-starter-grpc.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo gRPC endpoint: $SERVICE_IP:{{ .Values.app.service.grpcPort }}
+  echo REST endpoint: $SERVICE_IP:{{ .Values.app.service.restPort }}
+{{- else if contains "ClusterIP" .Values.app.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "go-starter-grpc.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Release.Namespace }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+
+2. Get the database connection details:
+   kubectl get secret --namespace {{ .Release.Namespace }} {{ .Release.Name }}-postgresql -o jsonpath="{.data.postgres-password}" | base64 -d
+
+3. Get the Redis connection details:
+   kubectl get secret --namespace {{ .Release.Namespace }} {{ .Release.Name }}-redis -o jsonpath="{.data.redis-password}" | base64 -d
+
+4. Monitor the application:
+   kubectl logs -f deployment/{{ include "go-starter-grpc.fullname" . }} -n {{ .Release.Namespace }}
+
+5. Check application health:
+   kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "go-starter-grpc.name" . }}
+
+6. Scale the application:
+   kubectl scale deployment {{ include "go-starter-grpc.fullname" . }} --replicas=5 -n {{ .Release.Namespace }}

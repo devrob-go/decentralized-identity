@@ -1,0 +1,113 @@
+# Default values for auth-service
+# This is a YAML-formatted file.
+
+# Auth service configuration
+authService:
+  enabled: true
+  replicaCount: 2
+  
+  image:
+    repository: your-registry/auth-service
+    tag: "latest"
+    pullPolicy: IfNotPresent
+    
+  # Service configuration
+  service:
+    type: ClusterIP
+    grpcPort: 8080
+    restPort: 8081
+    annotations: {}
+    
+  # Ingress configuration
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+      nginx.ingress.kubernetes.io/upstream-vhost: "auth-service.default.svc.cluster.local"
+      cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    hosts:
+      - host: auth-staging.your-domain.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: auth-service-tls
+        hosts:
+          - auth-staging.your-domain.com
+
+  # Resource limits and requests
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+      
+  # Pod security context
+  podSecurityContext:
+    fsGroup: 1000
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    
+  # Container security context
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
+    capabilities:
+      drop:
+        - ALL
+    
+  # Liveness and readiness probes
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8081
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 8081
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+    
+  # Startup probe
+  startupProbe:
+    httpGet:
+      path: /health
+      port: 8081
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+    
+  # HPA configuration
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    targetMemoryUtilizationPercentage: 80
+    
+  # Environment variables
+  env:
+    APP_ENV: staging
+    LOG_LEVEL: debug
+    JWT_SECRET: "your-jwt-secret-here"
+    JWT_EXPIRY: "24h"
+    REFRESH_TOKEN_EXPIRY: "168h"
+    RATE_LIMIT_REQUESTS: "200"
+    RATE_LIMIT_WINDOW: "60"
