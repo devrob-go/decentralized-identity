@@ -65,8 +65,9 @@ func TestAuthService_SignIn_ValidationErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create auth service with nil DB (we're only testing validation)
 			authService := &AuthService{
-				DB:     nil,
-				logger: logger,
+				DB:        nil,
+				logger:    logger,
+				didClient: nil,
 			}
 
 			// Call SignIn - should fail validation before reaching DB
@@ -86,7 +87,7 @@ func TestAuthService_NewAuthService(t *testing.T) {
 	logger := zlog.NewLogger(zlog.Config{Level: "debug"})
 
 	// Test service creation
-	authService := NewAuthService(nil, logger)
+	authService := NewAuthService(nil, logger, nil)
 
 	assert.NotNil(t, authService)
 	assert.Nil(t, authService.DB)

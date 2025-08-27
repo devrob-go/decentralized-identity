@@ -12,6 +12,8 @@ type User struct {
 	Name      string    `json:"name" db:"name"`
 	Email     string    `json:"email" db:"email"`
 	Password  string    `json:"-" db:"password"`
+	DID       string    `json:"did,omitempty" db:"did"`
+	UserHash  string    `json:"user_hash,omitempty" db:"user_hash"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
 }

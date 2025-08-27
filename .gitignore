@@ -10,6 +10,7 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+coverage.out
 
 # Dependency directories (remove the comment below to include it)
 vendor/
@@ -23,12 +24,15 @@ go.work.sum
 .env.local
 .env.example
 .env.production
+.env.development
+.env.test
 
 # IDE files
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
 # OS generated files
 .DS_Store
@@ -41,10 +45,13 @@ Thumbs.db
 
 # Logs
 *.log
+logs/
 
 # Build artifacts
 bin/
 dist/
+build/
+target/
 
 # Docker
 .dockerignore
@@ -52,3 +59,62 @@ dist/
 # Database
 *.db
 *.sqlite
+postgres-data/
+
+# Blockchain & Smart Contracts
+contracts/node_modules/
+contracts/cache/
+contracts/artifacts/
+contracts/typechain/
+contracts/deployments/
+contracts/.env
+contracts/.secret
+contracts/coverage/
+contracts/coverage.json
+contracts/gas-report.txt
+
+# DID Manager
+services/did-manager/bin/
+services/did-manager/*.log
+services/did-manager/tmp/
+
+# Auth Service
+services/auth-service/bin/
+services/auth-service/*.log
+services/auth-service/tmp/
+
+# CLI
+cli/did-cli
+cli/*.log
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+certs/
+keys/
+
+# Deployment files
+deployment-info.json
+contract-addresses.json
+
+# Test files
+test-results/
+*.test.json
+
+# Temporary files
+tmp/
+temp/
+.cache/
+
+# Node.js (for smart contracts)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Package managers
+package-lock.json
+yarn.lock

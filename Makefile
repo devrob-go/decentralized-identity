@@ -1,282 +1,222 @@
-# Go Auth Service - Root Makefile
-# This Makefile provides common commands for building, testing, and deploying all services
+# Decentralized Identity & Authentication System Makefile
 
-.PHONY: help build test clean generate deploy local staging production lint fmt security
-
-# Default target
+.PHONY: help build test clean deploy start stop logs
 .DEFAULT_GOAL := help
 
-# Colors for output
-RED := \033[0;31m
-GREEN := \033[0;32m
-YELLOW := \033[1;33m
-BLUE := \033[0;34m
-NC := \033[0m # No Color
-
 # Variables
-SERVICES := auth-service
-ENVIRONMENTS := local staging production
+DID_MANAGER_DIR = services/did-manager
+AUTH_SERVICE_DIR = services/auth-service
+CONTRACTS_DIR = contracts
+CLI_DIR = cli
+
+# Colors for output
+GREEN = \033[0;32m
+YELLOW = \033[1;33m
+RED = \033[0;31m
+NC = \033[0m # No Color
 
 help: ## Show this help message
-	@echo "$(BLUE)Go Auth Service - Available Commands$(NC)"
+	@echo "$(GREEN)Decentralized Identity & Authentication System$(NC)"
 	@echo ""
-	@echo "$(YELLOW)Development Commands:$(NC)"
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(GREEN)%-20s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
-	@echo ""
-	@echo "$(YELLOW)Service Commands:$(NC)"
-	@echo "  make service-build SERVICE=<service-name>    # Build specific service"
-	@echo "  make service-test SERVICE=<service-name>     # Test specific service"
-	@echo "  make service-clean SERVICE=<service-name>    # Clean specific service"
-	@echo ""
-	@echo "$(YELLOW)Environment Commands:$(NC)"
-	@echo "  make deploy-local                            # Deploy to local environment"
-	@echo "  make deploy-staging                          # Deploy to staging environment"
-	@echo "  make deploy-production                       # Deploy to production environment"
-	@echo ""
-	@echo "$(YELLOW)Available Services:$(NC)"
-	@for service in $(SERVICES); do \
-		echo "  - $$service"; \
-	done
-	@echo ""
-	@echo "$(YELLOW)Available Environments:$(NC)"
-	@for env in $(ENVIRONMENTS); do \
-		echo "  - $$env"; \
-	done
+	@echo "Available commands:"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  $(YELLOW)%-20s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 # Development Commands
+dev-start: ## Start all services for development
+	@echo "$(GREEN)Starting development environment...$(NC)"
+	cd deployments/local && docker-compose up -d
+	@echo "$(GREEN)Development environment started!$(NC)"
+	@echo "Services available at:"
+	@echo "  - Auth Service: http://localhost:8080"
+	@echo "  - DID Manager: http://localhost:8082"
+	@echo "  - PostgreSQL: localhost:5432"
+	@echo "  - NATS: localhost:4222"
+	@echo "  - Ganache: localhost:8545"
 
-deps: ## Install/update dependencies for all modules
-	@echo "$(YELLOW)Installing dependencies for all modules...$(NC)"
-	@go work sync
-	@echo "$(GREEN)✓ Dependencies installed$(NC)"
+dev-stop: ## Stop all development services
+	@echo "$(YELLOW)Stopping development environment...$(NC)"
+	cd deployments/local && docker-compose down
+	@echo "$(GREEN)Development environment stopped!$(NC)"
 
-build: ## Build all services
-	@echo "$(YELLOW)Building all services...$(NC)"
-	@./scripts/build.sh
+dev-logs: ## Show logs from all services
+	cd deployments/local && docker-compose logs -f
 
-test: ## Run tests for all services
-	@echo "$(YELLOW)Running tests for all services...$(NC)"
-	@./scripts/test.sh
+dev-restart: ## Restart all development services
+	@echo "$(YELLOW)Restarting development environment...$(NC)"
+	cd deployments/local && docker-compose restart
+	@echo "$(GREEN)Development environment restarted!$(NC)"
 
-clean: ## Clean build artifacts
-	@echo "$(YELLOW)Cleaning build artifacts...$(NC)"
-	@rm -rf bin/
-	@rm -rf services/*/bin/
-	@rm -rf coverage.out
-	@echo "$(GREEN)✓ Cleaned build artifacts$(NC)"
+# Building Commands
+build: build-did-manager build-auth-service ## Build all services
 
-generate: ## Generate protobuf and mock code
-	@echo "$(YELLOW)Generating code...$(NC)"
-	@./scripts/generate.sh
-	@./tools/mockgen.sh
-	@echo "$(GREEN)✓ Code generation completed$(NC)"
+build-did-manager: ## Build DID Manager service
+	@echo "$(GREEN)Building DID Manager service...$(NC)"
+	cd $(DID_MANAGER_DIR) && go build -o bin/did-manager ./cmd/server
 
-lint: ## Run linter for all services
-	@echo "$(YELLOW)Running linter for all services...$(NC)"
-	@for service in $(SERVICES); do \
-		echo "Linting $$service..."; \
-		cd services/$$service && golangci-lint run && cd ../..; \
-	done
-	@echo "$(GREEN)✓ Linting completed$(NC)"
+build-auth-service: ## Build Auth Service
+	@echo "$(GREEN)Building Auth Service...$(NC)"
+	cd $(AUTH_SERVICE_DIR) && go build -o bin/auth-service ./cmd/server
 
-fmt: ## Format code for all services
-	@echo "$(YELLOW)Formatting code for all services...$(NC)"
-	@go fmt ./...
-	@for service in $(SERVICES); do \
-		echo "Formatting $$service..."; \
-		cd services/$$service && go fmt ./... && cd ../..; \
-	done
-	@echo "$(GREEN)✓ Code formatting completed$(NC)"
+build-cli: ## Build CLI client
+	@echo "$(GREEN)Building CLI client...$(NC)"
+	cd $(CLI_DIR) && go build -o bin/did-cli .
 
-security: ## Run security checks
-	@echo "$(YELLOW)Running security checks...$(NC)"
-	@go vet ./...
-	@for service in $(SERVICES); do \
-		echo "Checking $$service..."; \
-		cd services/$$service && go vet ./... && cd ../..; \
-	done
-	@echo "$(GREEN)✓ Security checks completed$(NC)"
+# Testing Commands
+test: test-did-manager test-auth-service test-contracts ## Run all tests
 
-# Service-specific Commands
+test-did-manager: ## Test DID Manager service
+	@echo "$(GREEN)Testing DID Manager service...$(NC)"
+	cd $(DID_MANAGER_DIR) && go test -v ./...
 
-service-build: ## Build a specific service (use SERVICE=<service-name>)
-	@if [ -z "$(SERVICE)" ]; then \
-		echo "$(RED)Error: SERVICE variable not set$(NC)"; \
-		echo "Usage: make service-build SERVICE=<service-name>"; \
-		echo "Available services: $(SERVICES)"; \
-		exit 1; \
-	fi
-	@echo "$(YELLOW)Building $(SERVICE)...$(NC)"
-	@cd services/$(SERVICE) && go build -o bin/$(SERVICE) ./cmd/server
+test-auth-service: ## Test Auth Service
+	@echo "$(GREEN)Testing Auth Service...$(NC)"
+	cd $(AUTH_SERVICE_DIR) && go test -v ./...
 
-service-test: ## Test a specific service (use SERVICE=<service-name>)
-	@if [ -z "$(SERVICE)" ]; then \
-		echo "$(RED)Error: SERVICE variable not set$(NC)"; \
-		echo "Usage: make service-test SERVICE=<service-name>"; \
-		echo "Available services: $(SERVICES)"; \
-		exit 1; \
-	fi
-	@echo "$(YELLOW)Testing $(SERVICE)...$(NC)"
-	@cd services/$(SERVICE) && go test ./...
+test-contracts: ## Test smart contracts
+	@echo "$(GREEN)Testing smart contracts...$(NC)"
+	cd $(CONTRACTS_DIR) && npm test
 
-service-clean: ## Clean a specific service (use SERVICE=<service-name>)
-	@if [ -z "$(SERVICE)" ]; then \
-		echo "$(RED)Error: SERVICE variable not set$(NC)"; \
-		echo "Usage: make service-clean SERVICE=<service-name>"; \
-		echo "Available services: $(SERVICES)"; \
-		exit 1; \
-	fi
-	@echo "$(YELLOW)Cleaning $(SERVICE)...$(NC)"
-	@rm -rf services/$(SERVICE)/bin/
-	@echo "$(GREEN)✓ Cleaned $(SERVICE)$(NC)"
+# Smart Contract Commands
+contracts-install: ## Install smart contract dependencies
+	@echo "$(GREEN)Installing smart contract dependencies...$(NC)"
+	cd $(CONTRACTS_DIR) && npm install
 
-# Deployment Commands
+contracts-compile: ## Compile smart contracts
+	@echo "$(GREEN)Compiling smart contracts...$(NC)"
+	cd $(CONTRACTS_DIR) && npx hardhat compile
 
-deploy: ## Deploy all services to specified environment (use ENV=<environment>)
-	@if [ -z "$(ENV)" ]; then \
-		echo "$(RED)Error: ENV variable not set$(NC)"; \
-		echo "Usage: make deploy ENV=<environment>"; \
-		echo "Available environments: $(ENVIRONMENTS)"; \
-		exit 1; \
-	fi
-	@echo "$(YELLOW)Deploying to $(ENV) environment...$(NC)"
-	@./scripts/deploy.sh -e $(ENV)
+contracts-deploy-local: ## Deploy smart contracts to local network
+	@echo "$(GREEN)Deploying smart contracts to local network...$(NC)"
+	cd $(CONTRACTS_DIR) && npx hardhat run scripts/deploy.js --network localhost
 
-deploy-local: ## Deploy to local environment
-	@echo "$(YELLOW)Deploying to local environment...$(NC)"
-	@./scripts/deploy.sh -e local
+contracts-deploy-testnet: ## Deploy smart contracts to testnet
+	@echo "$(YELLOW)Deploying smart contracts to testnet...$(NC)"
+	cd $(CONTRACTS_DIR) && npx hardhat run scripts/deploy.js --network testnet
 
-deploy-staging: ## Deploy to staging environment
-	@echo "$(YELLOW)Deploying to staging environment...$(NC)"
-	@./scripts/deploy.sh -e staging
-
-deploy-production: ## Deploy to production environment
-	@echo "$(YELLOW)Deploying to production environment...$(NC)"
-	@./scripts/deploy.sh -e production
+contracts-deploy-mainnet: ## Deploy smart contracts to mainnet
+	@echo "$(RED)Deploying smart contracts to mainnet...$(NC)"
+	@read -p "Are you sure you want to deploy to mainnet? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
+	cd $(CONTRACTS_DIR) && npx hardhat run scripts/deploy.js --network mainnet
 
 # Database Commands
+db-init: ## Initialize database schema
+	@echo "$(GREEN)Initializing database schema...$(NC)"
+	cd deployments/local && docker-compose exec postgres psql -U postgres -d starter_db -f /docker-entrypoint-initdb.d/init.sql
 
-db-start: ## Start local database
-	@echo "$(YELLOW)Starting local database...$(NC)"
-	@cd deployments/local && docker-compose up -d postgres
+db-reset: ## Reset database (WARNING: This will delete all data)
+	@echo "$(RED)WARNING: This will delete all data!$(NC)"
+	@read -p "Are you sure? (y/N): " confirm && [ "$$confirm" = "y" ] || exit 1
+	cd deployments/local && docker-compose down -v
+	cd deployments/local && docker-compose up -d postgres
+	@echo "$(GREEN)Database reset complete!$(NC)"
 
-db-stop: ## Stop local database
-	@echo "$(YELLOW)Stopping local database...$(NC)"
-	@cd deployments/local && docker-compose stop postgres
+# CLI Commands
+cli-demo: ## Run CLI demo workflow
+	@echo "$(GREEN)Running CLI demo...$(NC)"
+	cd $(CLI_DIR) && go run did-cli.go demo
 
-db-reset: ## Reset local database
-	@echo "$(YELLOW)Resetting local database...$(NC)"
-	@cd deployments/local && docker-compose down -v postgres && docker-compose up -d postgres
-
-db-migrate: ## Run database migrations for all services
-	@echo "$(YELLOW)Running database migrations...$(NC)"
-	@for service in $(SERVICES); do \
-		echo "Migrating $$service..."; \
-		cd services/$$service && go run cmd/migrate/main.go && cd ../..; \
-	done
-	@echo "$(GREEN)✓ Database migrations completed$(NC)"
+cli-health: ## Check service health via CLI
+	@echo "$(GREEN)Checking service health...$(NC)"
+	cd $(CLI_DIR) && go run did-cli.go health
 
 # Utility Commands
+clean: ## Clean build artifacts
+	@echo "$(YELLOW)Cleaning build artifacts...$(NC)"
+	rm -rf $(DID_MANAGER_DIR)/bin/
+	rm -rf $(AUTH_SERVICE_DIR)/bin/
+	rm -rf $(CLI_DIR)/bin/
+	rm -rf $(CONTRACTS_DIR)/cache/
+	rm -rf $(CONTRACTS_DIR)/artifacts/
 
-proto: ## Generate protobuf code only
-	@echo "$(YELLOW)Generating protobuf code...$(NC)"
-	@./tools/protoc-gen-go.sh
+deps: ## Download Go dependencies
+	@echo "$(GREEN)Downloading Go dependencies...$(NC)"
+	cd $(DID_MANAGER_DIR) && go mod download
+	cd $(AUTH_SERVICE_DIR) && go mod download
+	cd $(CLI_DIR) && go mod download
 
-mocks: ## Generate mock code only
-	@echo "$(YELLOW)Generating mock code...$(NC)"
-	@./tools/mockgen.sh
+fmt: ## Format Go code
+	@echo "$(GREEN)Formatting Go code...$(NC)"
+	cd $(DID_MANAGER_DIR) && go fmt ./...
+	cd $(AUTH_SERVICE_DIR) && go fmt ./...
+	cd $(CLI_DIR) && go fmt ./...
 
-coverage: ## Generate test coverage report
-	@echo "$(YELLOW)Generating test coverage report...$(NC)"
-	@go test -coverpkg=./... -coverprofile=coverage.out ./...
-	@go tool cover -html=coverage.out -o coverage.html
-	@echo "$(GREEN)✓ Coverage report generated: coverage.html$(NC)"
+lint: ## Lint Go code
+	@echo "$(GREEN)Linting Go code...$(NC)"
+	cd $(DID_MANAGER_DIR) && golangci-lint run
+	cd $(AUTH_SERVICE_DIR) && golangci-lint run
+	cd $(CLI_DIR) && golangci-lint run
 
-# Development workflow commands
+# Monitoring Commands
+status: ## Show service status
+	@echo "$(GREEN)Service Status:$(NC)"
+	cd deployments/local && docker-compose ps
 
-dev-setup: ## Complete development environment setup
-	@echo "$(YELLOW)Setting up development environment...$(NC)"
-	@make deps
-	@make generate
-	@make db-start
-	@echo "$(GREEN)✓ Development environment setup completed$(NC)"
+logs-did-manager: ## Show DID Manager logs
+	cd deployments/local && docker-compose logs -f did-manager
 
-dev-start: ## Start development environment
-	@echo "$(YELLOW)Starting development environment...$(NC)"
-	@make deploy-local
-	@echo "$(GREEN)✓ Development environment started$(NC)"
+logs-auth-service: ## Show Auth Service logs
+	cd deployments/local && docker-compose logs -f auth-service
 
-dev-stop: ## Stop development environment
-	@echo "$(YELLOW)Stopping development environment...$(NC)"
-	@cd deployments/local && docker-compose down
-	@echo "$(GREEN)✓ Development environment stopped$(NC)"
+logs-postgres: ## Show PostgreSQL logs
+	cd deployments/local && docker-compose logs -f postgres
 
-# CI/CD Commands
+logs-nats: ## Show NATS logs
+	cd deployments/local && docker-compose logs -f nats
 
-ci-build: ## CI build command
-	@echo "$(YELLOW)Running CI build...$(NC)"
-	@make deps
-	@make generate
-	@make build
-	@make test
-	@make lint
-	@make security
-	@echo "$(GREEN)✓ CI build completed successfully$(NC)"
+logs-ganache: ## Show Ganache logs
+	cd deployments/local && docker-compose logs -f ganache
 
-ci-deploy: ## CI deploy command
-	@echo "$(YELLOW)Running CI deploy...$(NC)"
-	@make deploy-staging
-	@echo "$(GREEN)✓ CI deploy completed successfully$(NC)"
+# Production Commands
+prod-build: ## Build production Docker images
+	@echo "$(GREEN)Building production images...$(NC)"
+	docker build -f $(DID_MANAGER_DIR)/Dockerfile.prod -t did-manager:prod $(DID_MANAGER_DIR)
+	docker build -f $(AUTH_SERVICE_DIR)/Dockerfile.prod -t auth-service:prod $(AUTH_SERVICE_DIR)
 
-# Documentation Commands
+prod-deploy: ## Deploy to production (requires proper configuration)
+	@echo "$(RED)Production deployment requires proper configuration!$(NC)"
+	@echo "Please ensure you have:"
+	@echo "  - Production environment variables"
+	@echo "  - Production database credentials"
+	@echo "  - Production blockchain network configuration"
+	@echo "  - Proper security measures in place"
 
-docs-serve: ## Serve documentation locally
-	@echo "$(YELLOW)Serving documentation...$(NC)"
-	@if command -v python3 &> /dev/null; then \
-		cd docs && python3 -m http.server 8000; \
-	elif command -v python &> /dev/null; then \
-		cd docs && python -m SimpleHTTPServer 8000; \
-	else \
-		echo "$(RED)Python not found. Please install Python to serve documentation.$(NC)"; \
-		exit 1; \
-	fi
+# Help Commands
+check-env: ## Check environment configuration
+	@echo "$(GREEN)Checking environment configuration...$(NC)"
+	@echo "DID Manager environment:"
+	@if [ -f $(DID_MANAGER_DIR)/.env ]; then echo "  ✓ .env file exists"; else echo "  ✗ .env file missing"; fi
+	@echo "Auth Service environment:"
+	@if [ -f $(AUTH_SERVICE_DIR)/.env ]; then echo "  ✓ .env file exists"; else echo "  ✗ .env file missing"; fi
+	@echo "Smart Contract environment:"
+	@if [ -f $(CONTRACTS_DIR)/.env ]; then echo "  ✓ .env file exists"; else echo "  ✗ .env file missing"; fi
 
-# Cleanup Commands
+setup: ## Initial setup for new developers
+	@echo "$(GREEN)Setting up development environment...$(NC)"
+	@echo "1. Installing Go dependencies..."
+	$(MAKE) deps
+	@echo "2. Installing smart contract dependencies..."
+	$(MAKE) contracts-install
+	@echo "3. Building services..."
+	$(MAKE) build
+	@echo "4. Starting development environment..."
+	$(MAKE) dev-start
+	@echo "$(GREEN)Setup complete!$(NC)"
+	@echo "Next steps:"
+	@echo "  - Deploy smart contracts: make contracts-deploy-local"
+	@echo "  - Run demo: make cli-demo"
+	@echo "  - Check status: make status"
 
-clean-all: ## Clean everything including Docker
-	@echo "$(YELLOW)Cleaning everything...$(NC)"
-	@make clean
-	@cd deployments/local && docker-compose down -v
-	@docker system prune -f
-	@echo "$(GREEN)✓ Complete cleanup completed$(NC)"
+# Quick Commands
+quick-start: ## Quick start for development
+	@echo "$(GREEN)Quick starting development environment...$(NC)"
+	$(MAKE) dev-start
+	@echo "Waiting for services to be ready..."
+	@sleep 10
+	$(MAKE) contracts-deploy-local
+	@echo "$(GREEN)Ready for development!$(NC)"
 
-# Status Commands
+quick-stop: ## Quick stop all services
+	$(MAKE) dev-stop
 
-status: ## Show status of all services
-	@echo "$(YELLOW)Service Status:$(NC)"
-	@for service in $(SERVICES); do \
-		if [ -d "services/$$service/bin" ]; then \
-			echo "  $$service: $(GREEN)✓ Built$(NC)"; \
-		else \
-			echo "  $$service: $(RED)✗ Not built$(NC)"; \
-		fi; \
-	done
-	@echo ""
-	@echo "$(YELLOW)Local Environment Status:$(NC)"
-	@cd deployments/local && docker-compose ps
-
-# Quick commands for common tasks
-
-quick-build: ## Quick build without tests
-	@echo "$(YELLOW)Quick building all services...$(NC)"
-	@make deps
-	@make generate
-	@make build
-
-quick-test: ## Quick test without building
-	@echo "$(YELLOW)Quick testing all services...$(NC)"
-	@make test
-
-quick-deploy: ## Quick deploy to local
-	@echo "$(YELLOW)Quick deploying to local...$(NC)"
-	@make deploy-local
+# Show help by default
+.DEFAULT_GOAL := help

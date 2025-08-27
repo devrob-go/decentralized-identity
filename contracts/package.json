@@ -1,0 +1,34 @@
+{
+    "name": "did-registry-contracts",
+    "version": "1.0.0",
+    "description": "Smart contracts for Decentralized Identity management",
+    "main": "index.js",
+    "scripts": {
+        "compile": "hardhat compile",
+        "test": "hardhat test",
+        "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+        "deploy:testnet": "hardhat run scripts/deploy.js --network testnet",
+        "deploy:mainnet": "hardhat run scripts/deploy.js --network mainnet",
+        "verify": "hardhat verify",
+        "clean": "hardhat clean",
+        "node": "hardhat node",
+        "console": "hardhat console"
+    },
+    "keywords": [
+        "ethereum",
+        "solidity",
+        "did",
+        "decentralized-identity",
+        "blockchain"
+    ],
+    "author": "Your Name",
+    "license": "MIT",
+    "devDependencies": {
+        "@nomicfoundation/hardhat-toolbox": "^2.0.0",
+        "@openzeppelin/contracts": "^4.9.0",
+        "hardhat": "^2.17.0"
+    },
+    "dependencies": {
+        "@openzeppelin/contracts": "^4.9.0"
+    }
+}

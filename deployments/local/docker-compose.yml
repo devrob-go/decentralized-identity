@@ -1,7 +1,8 @@
 version: "3.8"
 
 services:
-  app:
+  # Auth Service (existing)
+  auth-service:
     build:
       context: ../..
       dockerfile: services/auth-service/Dockerfile
@@ -22,7 +23,7 @@ services:
       - ENCRYPTION_KEY=supersecureencryptionkey32bytes
       - LOG_LEVEL=debug
       - LOG_JSON_FORMAT=true
-      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080,http://localhost:8081
+      - ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080,http://localhost:8081,http://localhost:8082
       - HEALTH_CHECK_TIMEOUT=3
       - SERVER_READ_TIMEOUT=30
       - SERVER_WRITE_TIMEOUT=30
@@ -41,7 +42,7 @@ services:
       # Security headers
       - SECURITY_HEADERS_ENABLED=true
       - HSTS_MAX_AGE=31536000
-      - CONTENT_SECURITY_POLICY=default-src 'self'; connect-src 'self' http://localhost:8080 http://localhost:8081; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+      - CONTENT_SECURITY_POLICY=default-src 'self'; connect-src 'self' http://localhost:8080 http://localhost:8081 http://localhost:8082; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
 
       # Password policy
       - MIN_PASSWORD_LENGTH=12
@@ -64,11 +65,76 @@ services:
       - LOG_SENSITIVE_DATA=false
       - LOG_REQUEST_HEADERS=false
       - LOG_RESPONSE_BODY=false
+
+      # DID Manager integration
+      - DID_MANAGER_URL=http://did-manager:8082
     depends_on:
       postgres:
         condition: service_healthy
+      did-manager:
+        condition: service_started
     networks:
       - app-network
+
+  # DID Manager Service
+  did-manager:
+    build:
+      context: ../..
+      dockerfile: services/did-manager/Dockerfile.dev
+    ports:
+      - "8082:8082"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=starter_db
+      - DB_SSLMODE=disable
+      - ETHEREUM_RPC_URL=http://ganache:8545
+      - ETHEREUM_PRIVATE_KEY=4c0883a69102937d6231471b5dbb6204fe5129617082792ae468d01a3f863187
+      - ETHEREUM_CONTRACT_ADDRESS=0xe78A0F7E598Cc8b0Bb87894B0F60dD2a88d6a8Ab
+      - NATS_URL=nats://nats:4222
+      - PORT=8082
+      - LOG_LEVEL=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_started
+      ganache:
+        condition: service_started
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # NATS Server for message queuing
+  nats:
+    image: nats:2.9-alpine
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: -js -m 8222
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # Ethereum Local Node (Ganache)
+  ganache:
+    image: trufflesuite/ganache-cli:latest
+    ports:
+      - "8545:8545"
+    command: >
+      --accounts 10
+      --defaultBalanceEther 1000
+      --gasLimit 8000000
+      --gasPrice 20000000000
+      --host 0.0.0.0
+      --port 8545
+      --networkId 1337
+      --deterministic
+    networks:
+      - app-network
+    restart: unless-stopped
 
 
 
